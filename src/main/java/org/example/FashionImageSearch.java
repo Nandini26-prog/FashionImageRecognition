@@ -1,5 +1,6 @@
 package org.example;
 import java.awt.image.BufferedImage;
+import java.awt.image.DataBufferByte;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -8,13 +9,12 @@ import java.util.List;
 
 import javax.imageio.ImageIO;
 
-import org.opencv.core.Core;
-import org.opencv.core.Mat;
-import org.opencv.core.MatOfKeyPoint;
-import org.opencv.core.Point;
-import org.opencv.core.Scalar;
-import org.opencv.features2d.DescriptorExtractor;
-import org.opencv.features2d.FeatureDetector;
+import org.opencv.core.*;
+//import org.opencv.features2d.DescriptorExtractor;
+//import org.opencv.features2d.FeatureDetector;
+
+import org.opencv.features2d.ORB;  // Replace DescriptorExtractor and FeatureDetector with ORB or any other Feature2D subclass
+import org.opencv.features2d.SIFT;
 import org.opencv.features2d.Features2d;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
@@ -33,20 +33,35 @@ import org.elasticsearch.search.builder.SearchSourceBuilder;
 
 public class FashionImageSearch {
 
+    private static Mat bufferedImageToMat(BufferedImage bufferedImage) {
+        // Convert BufferedImage to Mat
+        int type = bufferedImage.getType() == 0 ? BufferedImage.TYPE_3BYTE_BGR : bufferedImage.getType();
+        BufferedImage convertedImg = new BufferedImage(bufferedImage.getWidth(), bufferedImage.getHeight(), type);
+        convertedImg.getGraphics().drawImage(bufferedImage, 0, 0, null);
+        byte[] data = ((DataBufferByte) convertedImg.getRaster().getDataBuffer()).getData();
+        Mat mat = new Mat(bufferedImage.getHeight(), bufferedImage.getWidth(), CvType.CV_8UC3);
+        mat.put(0, 0, data);
+        return mat;
+    }
+
         public static void main(String[] args) throws Exception {
             // Load the input image
-            StringimageData = "iVBORw0KGg..."; // base64 encoded image data
-            BufferedImage inputImage = ImageIO.read(new ByteArrayInputStream(Base64.getDecoder().decode(imageData)));
+            String imageData = "iVBORw0KGgoAAAANSUhEUgAAAJYAAACWCAYAAADYiZgNAAAAOXRFWHRTb2Z0d2FyZQBNYXRwbG90bGliIHZlcnNpb24zLjQuMywgaHR0cHM6Ly9tYXRwbG90bGliLm9yZy/4";
+            // base64 encoded image data
+            BufferedImage inputImageputImage = ImageIO.read(new ByteArrayInputStream(Base64.getDecoder().decode(imageData)));
 
             // Extract features from the input image using OpenCV
-            Mat inputMat = new Mat(inputImage.getHeight(), inputImage.getWidth(), CvType.CV_8UC3);
-            Imgcodecs.imencode(".jpg", inputImage, inputMat);
+            Mat inputImage = bufferedImageToMat(inputImageputImage);
+            Mat inputMat = new Mat(inputImage.height(), inputImage.width(), CvType.CV_8UC3);
+            Imgcodecs.imencode(".jpg", inputImage, (MatOfByte) inputMat);
             MatOfKeyPoint keypoints = new MatOfKeyPoint();
-            FeatureDetector detector = FeatureDetector.create(FeatureDetector.SIFT);
-            detector.detect(inputMat, keypoints);
-            DescriptorExtractor extractor = DescriptorExtractor.create(DescriptorExtractor.SIFT);
+            SIFT sift = SIFT.create();
+
+            sift.detect(inputMat, keypoints);
+          //  DescriptorExtractor extractor = DescriptorExtractor.create(DescriptorExtractor.SIFT);
             Mat descriptors = new Mat();
-            extractor.compute(inputMat, keypoints, descriptors);
+            sift.compute(inputMat, keypoints, descriptors);
+
 
             // Index the features in Elasticsearch
             ObjectMapper mapper = new ObjectMapper();
@@ -77,4 +92,4 @@ public class FashionImageSearch {
             }
         }
     }
-}
+

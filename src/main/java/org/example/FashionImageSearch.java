@@ -3,6 +3,8 @@ package org.example;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.http.HttpHost;
+import org.elasticsearch.action.bulk.BulkRequest;
+import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
@@ -42,22 +44,40 @@ public class FashionImageSearch {
         return mat;
     }
 
-    private static void indexToElasticsearch(Mat descriptors) throws Exception {
+    private static void indexImagesToElasticsearch(List<BufferedImage> images) throws Exception {
         ObjectMapper mapper = new ObjectMapper();
-        ObjectNode jsonNode = mapper.createObjectNode();
-        jsonNode.put("image_id", "input_image");
-        ObjectNode metadataNode = mapper.createObjectNode();
-        metadataNode.put("category", "t-shirts");
-        metadataNode.put("color", "blue");
-        metadataNode.put("style", "casual");
-        jsonNode.set("metadata", metadataNode);
-        jsonNode.put("features", descriptors.dump());
-        String json = mapper.writeValueAsString(jsonNode);
+        BulkRequest bulkRequest = new BulkRequest();
 
+        for (BufferedImage image : images) {
+            Mat descriptors = extractFeatures(image);
+            ObjectNode jsonNode = mapper.createObjectNode();
+            jsonNode.put("image_id", "unique_id_" + System.currentTimeMillis());
+            ObjectNode metadataNode = mapper.createObjectNode();
+            metadataNode.put("category", "t-shirts");
+            metadataNode.put("color", "blue");
+            metadataNode.put("style", "casual");
+            jsonNode.set("metadata", metadataNode);
+            jsonNode.put("features", descriptors.dump());
+            String json = mapper.writeValueAsString(jsonNode);
 
-        IndexRequest indexRequest = new IndexRequest("fashion_image_index").id("input_image").source(json, XContentType.JSON);
-        client.index(indexRequest, RequestOptions.DEFAULT);
+            IndexRequest indexRequest = new IndexRequest("fashion_image_index").source(json, XContentType.JSON);
+            bulkRequest.add(indexRequest);
+        }
+        BulkResponse bulkResponse = client.bulk(bulkRequest, RequestOptions.DEFAULT);
+        if (bulkResponse.hasFailures()) {
+            throw new Exception("Bulk indexing failed: " + bulkResponse.buildFailureMessage());
+        }
     }
+    private static Mat extractFeatures(BufferedImage image) {
+        Mat inputMat = bufferedImageToMat(image);
+        MatOfKeyPoint keypoints = new MatOfKeyPoint();
+        SIFT sift = SIFT.create();
+        sift.detect(inputMat, keypoints);
+        Mat descriptors = new Mat();
+        sift.compute(inputMat, keypoints, descriptors);
+        return descriptors;
+    }
+
 
     private static List<String> searchInElasticsearch(Mat descriptors) throws Exception {
         List<String> matches = new ArrayList<>();
@@ -84,8 +104,13 @@ public class FashionImageSearch {
         RestClientBuilder builder = RestClient.builder(
                 new HttpHost("localhost", 9200, "https")
         );
-        RestClient restClient = builder.build();
+        client = new RestHighLevelClient(builder);
+        List<BufferedImage> imagesToIndex = new ArrayList<>();
+        // Add images to the list
+        // imagesToIndex.add(ImageIO.read(new File("path_to_image")));
 
+        // Index the images
+        indexImagesToElasticsearch(imagesToIndex);
         // Load the input image (base64 encoded image data)
         String imageData =
          "zL3BsYXRmb3JtL3JkZjpzdFJlZElEPSJhZG9iZTpjbGFzc2VzOmRzIj4gPC9zdFJlZD48L3R5cGU+IDxzdFJlZD48YmFzZT5pbWFnZTwvYmFzZT48L3N0UmVkPjwvcmRmOlJERj48L3g6eG1wbWV0YT4gPD94cGFja2V0IGJlZ2luPSLvu78iIGlkPSJXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQiPz4gPHRzcGFuSW5jcnlwdGlvbiA6cGFnZW9wPSIiPjwvTHRzcGFuSW5jcnlwdGlvbj4gPC9yZGY6UkRGIHhtbG5zOnJkZj0iaHR0cDovL3B1cmwub3JnL2RzL3BsYXRmb3JtL3JkZjpzdFJlZElEPSJhZG9iZTpjbGFzc2VzOmRzIj4gPC9zdFJlZD48L3R5cGU+IDxzdFJlZD48YmFzZT5pbWFnZTwvYmFzZT48L3N0UmVkPjwvcmRmOlJERj48L3g6eG1wbWV0YT4gPD94cGFja2V0IGJlZ2luPSLvu78iIGlkPSJXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQiPz4gPHRzcGFuSW5jcnlwdGlvbiA6cGFnZW9wPSIiPjwvTHRzcGFuSW5jcnl";
@@ -96,11 +121,12 @@ public class FashionImageSearch {
         MatOfKeyPoint keypoints = new MatOfKeyPoint();
         SIFT sift = SIFT.create();
         sift.detect(inputMat, keypoints);
-        Mat descriptors = new Mat();
+       // Mat descriptors = new Mat();
+        Mat descriptors=extractFeatures(inputImage);
         sift.compute(inputMat, keypoints, descriptors);
 
         // Index the features in Elasticsearch
-        indexToElasticsearch(descriptors);
+        //indexImagesToElasticsearch(descriptors);
 
         // Search for similar images in Elasticsearch
         List<String> matches = searchInElasticsearch(descriptors);

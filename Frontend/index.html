@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Myntra Prototype</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <header>
+        <div class="navbar">
+            <div class="logo">
+                <img src="images/myntra-logo.png" alt="Myntra Logo">
+            </div>
+            <nav>
+                <ul class="nav-links">
+                    <li><a href="#">Men</a></li>
+                    <li><a href="#">Women</a></li>
+                    <li><a href="#">Kids</a></li>
+                    <li><a href="#">Home & Living</a></li>
+                    <li><a href="#">Beauty</a></li>
+                    <li><a href="#">Studio</a></li>
+                </ul>
+            </nav>
+            <div class="search-bar">
+                <input type="text" placeholder="Search for products, brands and more">
+            </div>
+            <div class="ott-platforms">
+                <img src="images/disney-logo.jpg" alt="Disney+">
+                <img src="images/sony-logo.jpg" alt="sony">
+                <img src="images/netflix-logo.jpg" alt="Netflix">
+            </div>
+            <div class="user-options">
+                <a href="#">Profile</a>
+                <a href="#">Wishlist</a>
+                <a href="#">Bag</a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section id="ott-outfits">
+            <h2>OTT Inspired Outfits</h2>
+            <div id="platforms">
+                <img src="images/netflix-logo.jpg" alt="Netflix" data-platform="netflix">
+                <img src="images/sony-logo.jpg" alt="Sony Liv" data-platform="sony">
+                <img src="images/disney-logo.jpg" alt="Disney+" data-platform="disney">
+            </div>
+
+            <div id="shows-dropdown" class="dropdown">
+                <button class="dropbtn">Select Show</button>
+                <div id="show-menu" class="dropdown-content">
+                    <!-- Shows will be dynamically added here -->
+                </div>
+            </div>
+
+            <div id="outfits">
+                <!-- Outfits will be displayed here -->
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 Myntra</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
